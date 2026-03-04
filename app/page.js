@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import translations from "@/lib/i18n";
 import s from "./page.module.css";
 
 // Default categories in case API call fails
@@ -17,6 +18,20 @@ const FALLBACK_CATEGORIES = [
   { value: "other", label: "Other", icon: "📦" },
 ];
 
+// Chinese labels for categories
+const CATEGORY_LABELS_ZH = {
+  tops: "上衣",
+  bottoms: "裤子",
+  dresses: "裙子",
+  outerwear: "外套",
+  shoes: "鞋子",
+  bags: "包包",
+  accessories: "配饰",
+  sportswear: "运动装",
+  underwear: "内衣",
+  other: "其他",
+};
+
 export default function HomePage() {
   // ---- State ----
   const [items, setItems] = useState([]);
@@ -25,6 +40,18 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Language state: default to Chinese
+  const [locale, setLocale] = useState("zh");
+  const t = (key) => translations[locale]?.[key] || translations.en[key] || key;
+
+  // Get localized category label
+  const getCategoryLabel = (cat) => {
+    if (locale === "zh" && CATEGORY_LABELS_ZH[cat.value]) {
+      return CATEGORY_LABELS_ZH[cat.value];
+    }
+    return cat.label;
+  };
 
   // Modal states
   const [showForm, setShowForm] = useState(false);
@@ -59,7 +86,7 @@ export default function HomePage() {
       const data = await res.json();
       setItems(Array.isArray(data) ? data : []);
     } catch {
-      showToast("Failed to load items", "error");
+      showToast(t("failedToLoad"), "error");
     } finally {
       setLoading(false);
     }
@@ -69,6 +96,16 @@ export default function HomePage() {
     fetchItems();
   }, [fetchItems]);
 
+  // ---- Persist locale to localStorage ----
+  useEffect(() => {
+    const saved = localStorage.getItem("e-wardrobe-locale");
+    if (saved === "en" || saved === "zh") setLocale(saved);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("e-wardrobe-locale", locale);
+  }, [locale]);
+
   // ---- Toast helper ----
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -77,14 +114,14 @@ export default function HomePage() {
 
   // ---- Delete handler ----
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await fetch(`/api/items/${id}`, { method: "DELETE" });
-      showToast("Item deleted successfully");
+      showToast(t("itemDeleted"));
       setDetailItem(null);
       fetchItems();
     } catch {
-      showToast("Failed to delete item", "error");
+      showToast(t("failedToDelete"), "error");
     }
   };
 
@@ -99,18 +136,18 @@ export default function HomePage() {
         body: JSON.stringify(formData),
       });
       if (!res.ok) throw new Error();
-      showToast(editItem ? "Item updated" : "Item added");
+      showToast(editItem ? t("itemUpdated") : t("itemAdded"));
       setShowForm(false);
       setEditItem(null);
       fetchItems();
     } catch {
-      showToast("Failed to save item", "error");
+      showToast(t("failedToSave"), "error");
     }
   };
 
   // ---- Category lookup ----
   const getCategoryInfo = (val) =>
-    categories.find((c) => c.value === val) || { label: val, icon: "📦" };
+    categories.find((c) => c.value === val) || { label: val, icon: "📦", value: val };
 
   // ---- Unique brand count ----
   const brandCount = new Set(items.map((i) => i.brand).filter(Boolean)).size;
@@ -122,7 +159,7 @@ export default function HomePage() {
         <div className={s.headerInner}>
           <div className={s.logo}>
             <span className={s.logoIcon}>👗</span>
-            <span className={s.logoGradient}>E-Wardrobe</span>
+            <span className={s.logoGradient}>{t("appName")}</span>
           </div>
 
           <div className={s.searchWrapper}>
@@ -131,13 +168,21 @@ export default function HomePage() {
               id="global-search"
               className={s.searchInput}
               type="text"
-              placeholder="Search by brand, notes, color, size..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
           <div className={s.headerActions}>
+            <button
+              id="lang-toggle-btn"
+              className={`btn btn-ghost ${s.langToggle}`}
+              onClick={() => setLocale(locale === "zh" ? "en" : "zh")}
+              title={locale === "zh" ? "Switch to English" : "切换为中文"}
+            >
+              {t("langToggle")}
+            </button>
             <button
               id="add-item-btn"
               className="btn btn-primary"
@@ -146,7 +191,7 @@ export default function HomePage() {
                 setShowForm(true);
               }}
             >
-              ＋ Add Item
+              {t("addItem")}
             </button>
           </div>
         </div>
@@ -157,17 +202,17 @@ export default function HomePage() {
         <div className={s.statsBar}>
           <div className={s.statItem}>
             <span className={s.statValue}>{items.length}</span>
-            <span className={s.statLabel}>Items</span>
+            <span className={s.statLabel}>{t("items")}</span>
           </div>
           <div className={s.statItem}>
             <span className={s.statValue}>{brandCount}</span>
-            <span className={s.statLabel}>Brands</span>
+            <span className={s.statLabel}>{t("brands")}</span>
           </div>
           <div className={s.statItem}>
             <span className={s.statValue}>
               {new Set(items.map((i) => i.category)).size}
             </span>
-            <span className={s.statLabel}>Categories</span>
+            <span className={s.statLabel}>{t("categories")}</span>
           </div>
         </div>
 
@@ -177,7 +222,7 @@ export default function HomePage() {
             className={`${s.filterChip} ${activeCategory === "all" ? s.filterChipActive : ""}`}
             onClick={() => setActiveCategory("all")}
           >
-            ✨ All
+            ✨ {t("all")}
           </button>
           {categories.map((cat) => (
             <button
@@ -185,7 +230,7 @@ export default function HomePage() {
               className={`${s.filterChip} ${activeCategory === cat.value ? s.filterChipActive : ""}`}
               onClick={() => setActiveCategory(cat.value)}
             >
-              {cat.icon} {cat.label}
+              {cat.icon} {getCategoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -201,10 +246,8 @@ export default function HomePage() {
           ) : items.length === 0 ? (
             <div className={s.emptyState}>
               <div className={s.emptyIcon}>👔</div>
-              <div className={s.emptyTitle}>Your wardrobe is empty</div>
-              <div className={s.emptyText}>
-                Start adding your clothing items to build your digital closet.
-              </div>
+              <div className={s.emptyTitle}>{t("emptyTitle")}</div>
+              <div className={s.emptyText}>{t("emptyText")}</div>
               <button
                 className="btn btn-primary btn-lg"
                 onClick={() => {
@@ -212,7 +255,7 @@ export default function HomePage() {
                   setShowForm(true);
                 }}
               >
-                ＋ Add Your First Item
+                {t("addFirstItem")}
               </button>
             </div>
           ) : (
@@ -241,7 +284,7 @@ export default function HomePage() {
                           setShowForm(true);
                         }}
                       >
-                        ✏️ Edit
+                        {t("edit")}
                       </button>
                       <button
                         className="btn btn-danger"
@@ -251,19 +294,19 @@ export default function HomePage() {
                           handleDelete(item.id);
                         }}
                       >
-                        🗑 Delete
+                        {t("delete")}
                       </button>
                     </div>
                   </div>
                 </div>
                 <div className={s.itemInfo}>
                   <div className={s.itemBrand}>
-                    {item.brand || "Untitled"}
+                    {item.brand || t("untitled")}
                   </div>
                   <div className={s.itemMeta}>
                     <span className="badge">
                       {getCategoryInfo(item.category).icon}{" "}
-                      {getCategoryInfo(item.category).label}
+                      {getCategoryLabel(getCategoryInfo(item.category))}
                     </span>
                     {item.size && <span>· {item.size}</span>}
                   </div>
@@ -280,6 +323,8 @@ export default function HomePage() {
           item={detailItem}
           categories={categories}
           getCategoryInfo={getCategoryInfo}
+          getCategoryLabel={getCategoryLabel}
+          t={t}
           onClose={() => setDetailItem(null)}
           onEdit={() => {
             setEditItem(detailItem);
@@ -295,6 +340,8 @@ export default function HomePage() {
         <FormModal
           item={editItem}
           categories={categories}
+          getCategoryLabel={getCategoryLabel}
+          t={t}
           onClose={() => {
             setShowForm(false);
             setEditItem(null);
@@ -318,7 +365,7 @@ export default function HomePage() {
 /* ============================================
    Detail Modal Component
    ============================================ */
-function DetailModal({ item, getCategoryInfo, onClose, onEdit, onDelete }) {
+function DetailModal({ item, getCategoryInfo, getCategoryLabel, t, onClose, onEdit, onDelete }) {
   const catInfo = getCategoryInfo(item.category);
 
   return (
@@ -329,7 +376,7 @@ function DetailModal({ item, getCategoryInfo, onClose, onEdit, onDelete }) {
         style={{ maxWidth: 640 }}
       >
         <div className="modal-header">
-          <h2 className="modal-title">{item.brand || "Clothing Detail"}</h2>
+          <h2 className="modal-title">{item.brand || t("clothingDetail")}</h2>
           <button className="btn btn-icon btn-ghost" onClick={onClose}>
             ✕
           </button>
@@ -344,36 +391,36 @@ function DetailModal({ item, getCategoryInfo, onClose, onEdit, onDelete }) {
 
         <div className={s.detailGrid}>
           <div className={s.detailField}>
-            <span className={s.detailLabel}>Category</span>
+            <span className={s.detailLabel}>{t("category")}</span>
             <span className={s.detailValue}>
-              {catInfo.icon} {catInfo.label}
+              {catInfo.icon} {getCategoryLabel(catInfo)}
             </span>
           </div>
           <div className={s.detailField}>
-            <span className={s.detailLabel}>Brand</span>
-            <span className={s.detailValue}>{item.brand || "—"}</span>
+            <span className={s.detailLabel}>{t("brand")}</span>
+            <span className={s.detailValue}>{item.brand || t("noValue")}</span>
           </div>
           <div className={s.detailField}>
-            <span className={s.detailLabel}>Size</span>
-            <span className={s.detailValue}>{item.size || "—"}</span>
+            <span className={s.detailLabel}>{t("size")}</span>
+            <span className={s.detailValue}>{item.size || t("noValue")}</span>
           </div>
           <div className={s.detailField}>
-            <span className={s.detailLabel}>Color</span>
-            <span className={s.detailValue}>{item.color || "—"}</span>
+            <span className={s.detailLabel}>{t("color")}</span>
+            <span className={s.detailValue}>{item.color || t("noValue")}</span>
           </div>
           <div className={s.detailField}>
-            <span className={s.detailLabel}>Purchase Date</span>
-            <span className={s.detailValue}>{item.purchase_date || "—"}</span>
+            <span className={s.detailLabel}>{t("purchaseDate")}</span>
+            <span className={s.detailValue}>{item.purchase_date || t("noValue")}</span>
           </div>
           <div className={s.detailField}>
-            <span className={s.detailLabel}>Added</span>
+            <span className={s.detailLabel}>{t("added")}</span>
             <span className={s.detailValue}>
               {new Date(item.created_at).toLocaleDateString()}
             </span>
           </div>
           {item.notes && (
             <div className={`${s.detailField} ${s.detailNotes}`}>
-              <span className={s.detailLabel}>Notes</span>
+              <span className={s.detailLabel}>{t("notes")}</span>
               <span className={s.detailValue}>{item.notes}</span>
             </div>
           )}
@@ -381,10 +428,10 @@ function DetailModal({ item, getCategoryInfo, onClose, onEdit, onDelete }) {
 
         <div className={s.detailActions}>
           <button className="btn btn-primary" onClick={onEdit}>
-            ✏️ Edit
+            {t("edit")}
           </button>
           <button className="btn btn-danger" onClick={onDelete}>
-            🗑 Delete
+            {t("delete")}
           </button>
         </div>
       </div>
@@ -395,7 +442,7 @@ function DetailModal({ item, getCategoryInfo, onClose, onEdit, onDelete }) {
 /* ============================================
    Form Modal Component (Add / Edit)
    ============================================ */
-function FormModal({ item, categories, onClose, onSave }) {
+function FormModal({ item, categories, getCategoryLabel, t, onClose, onSave }) {
   const [form, setForm] = useState({
     image_url: item?.image_url || "",
     category: item?.category || "tops",
@@ -425,10 +472,10 @@ function FormModal({ item, categories, onClose, onSave }) {
       if (data.url) {
         handleChange("image_url", data.url);
       } else {
-        alert(data.error || "Upload failed");
+        alert(data.error || t("uploadFailed"));
       }
     } catch {
-      alert("Upload failed. Please try again.");
+      alert(t("uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -457,7 +504,7 @@ function FormModal({ item, categories, onClose, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.image_url) {
-      alert("Please upload an image first.");
+      alert(t("pleaseUploadImage"));
       return;
     }
     setSaving(true);
@@ -470,7 +517,7 @@ function FormModal({ item, categories, onClose, onSave }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">
-            {item ? "Edit Item" : "Add New Item"}
+            {item ? t("editItem") : t("addNewItem")}
           </h2>
           <button className="btn btn-icon btn-ghost" onClick={onClose}>
             ✕
@@ -498,21 +545,17 @@ function FormModal({ item, categories, onClose, onSave }) {
                   />
                   <div className={s.previewOverlay}>
                     <span style={{ color: "#fff", fontSize: "0.875rem" }}>
-                      Click or drop to change
+                      {t("changeImage")}
                     </span>
                   </div>
                 </>
               ) : uploading ? (
-                <span className={s.dropzoneText}>Uploading…</span>
+                <span className={s.dropzoneText}>{t("uploading")}</span>
               ) : (
                 <>
                   <span className={s.dropzoneIcon}>📸</span>
-                  <span className={s.dropzoneText}>
-                    Drop an image here or click to upload
-                  </span>
-                  <span className={s.dropzoneHint}>
-                    JPEG, PNG, WebP — max 10 MB
-                  </span>
+                  <span className={s.dropzoneText}>{t("dropzoneText")}</span>
+                  <span className={s.dropzoneHint}>{t("dropzoneHint")}</span>
                 </>
               )}
               <input
@@ -529,7 +572,7 @@ function FormModal({ item, categories, onClose, onSave }) {
             {/* Category */}
             <div className="form-group">
               <label className="form-label" htmlFor="category">
-                Category
+                {t("categoryLabel")}
               </label>
               <select
                 id="category"
@@ -539,7 +582,7 @@ function FormModal({ item, categories, onClose, onSave }) {
               >
                 {categories.map((c) => (
                   <option key={c.value} value={c.value}>
-                    {c.icon} {c.label}
+                    {c.icon} {getCategoryLabel(c)}
                   </option>
                 ))}
               </select>
@@ -548,13 +591,13 @@ function FormModal({ item, categories, onClose, onSave }) {
             {/* Brand */}
             <div className="form-group">
               <label className="form-label" htmlFor="brand">
-                Brand
+                {t("brandLabel")}
               </label>
               <input
                 id="brand"
                 className="input"
                 type="text"
-                placeholder="e.g. Nike, Zara"
+                placeholder={t("brandPlaceholder")}
                 value={form.brand}
                 onChange={(e) => handleChange("brand", e.target.value)}
               />
@@ -563,13 +606,13 @@ function FormModal({ item, categories, onClose, onSave }) {
             {/* Size */}
             <div className="form-group">
               <label className="form-label" htmlFor="size">
-                Size
+                {t("sizeLabel")}
               </label>
               <input
                 id="size"
                 className="input"
                 type="text"
-                placeholder="e.g. M, 42, 9.5"
+                placeholder={t("sizePlaceholder")}
                 value={form.size}
                 onChange={(e) => handleChange("size", e.target.value)}
               />
@@ -578,13 +621,13 @@ function FormModal({ item, categories, onClose, onSave }) {
             {/* Color */}
             <div className="form-group">
               <label className="form-label" htmlFor="color">
-                Color
+                {t("colorLabel")}
               </label>
               <input
                 id="color"
                 className="input"
                 type="text"
-                placeholder="e.g. Black, Navy Blue"
+                placeholder={t("colorPlaceholder")}
                 value={form.color}
                 onChange={(e) => handleChange("color", e.target.value)}
               />
@@ -593,7 +636,7 @@ function FormModal({ item, categories, onClose, onSave }) {
             {/* Purchase Date */}
             <div className={`form-group ${s.formFull}`}>
               <label className="form-label" htmlFor="purchaseDate">
-                Purchase Date
+                {t("purchaseDateLabel")}
               </label>
               <input
                 id="purchaseDate"
@@ -609,12 +652,12 @@ function FormModal({ item, categories, onClose, onSave }) {
             {/* Notes */}
             <div className={`form-group ${s.formFull}`}>
               <label className="form-label" htmlFor="notes">
-                Notes
+                {t("notesLabel")}
               </label>
               <textarea
                 id="notes"
                 className="textarea"
-                placeholder="Any additional information about this item..."
+                placeholder={t("notesPlaceholder")}
                 value={form.notes}
                 onChange={(e) => handleChange("notes", e.target.value)}
               />
@@ -627,14 +670,14 @@ function FormModal({ item, categories, onClose, onSave }) {
                 className="btn"
                 onClick={onClose}
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={saving || uploading}
               >
-                {saving ? "Saving…" : item ? "Save Changes" : "Add to Wardrobe"}
+                {saving ? t("saving") : item ? t("saveChanges") : t("addToWardrobe")}
               </button>
             </div>
           </div>
