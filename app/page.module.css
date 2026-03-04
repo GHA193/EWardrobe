@@ -7,7 +7,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(11, 14, 20, 0.75);
+  background: rgba(245, 245, 250, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-color);
@@ -220,7 +220,7 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(to top,
-      rgba(0, 0, 0, 0.7) 0%,
+      rgba(0, 0, 0, 0.55) 0%,
       transparent 50%);
   opacity: 0;
   transition: opacity var(--transition-base);
@@ -470,8 +470,8 @@
   padding: var(--space-md) var(--space-lg);
   font-size: 0.875rem;
   font-weight: 500;
-  color: #fff;
-  background: var(--bg-elevated);
+  color: var(--text-primary);
+  background: var(--bg-surface);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
