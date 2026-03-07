@@ -793,6 +793,21 @@ function FormModal({ item, categories, getCategoryLabel, t, onClose, onSave }) {
 
   // Upload image file
   const uploadFile = async (file) => {
+    // 1. Validate file size (max 10MB) client-side
+    const MAX_SIZE = 10 * 1024 * 1024;
+    // 2. Validate file type client-side
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+    if (file.size > MAX_SIZE) {
+      alert(t("uploadFailed") + " - Max 10MB");
+      return;
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      alert(t("uploadFailed") + " - Invalid Image Type");
+      return;
+    }
+
     setUploading(true);
     try {
       const fd = new FormData();

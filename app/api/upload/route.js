@@ -24,7 +24,7 @@ export async function POST(request) {
             );
         }
 
-        // Validate file type
+        // Validate file type (Client-sided MIME might be spoofed, but we check anyway)
         const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
         if (!allowedTypes.includes(file.type)) {
             return NextResponse.json(
@@ -42,22 +42,53 @@ export async function POST(request) {
             );
         }
 
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        // Security: Magic Number (File Signature) Validation
+        // This prevents malicious files masked with an image extension from being saved.
+        let ext = null;
+
+        // JPEG: FF D8 FF
+        if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+            ext = 'jpg';
+        }
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+            ext = 'png';
+        }
+        // GIF: GIF87a or GIF89a (47 49 46 38)
+        else if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) {
+            ext = 'gif';
+        }
+        // WebP: RIFF .... WEBP
+        else if (
+            buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+            buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
+        ) {
+            ext = 'webp';
+        }
+
+        if (!ext) {
+            return NextResponse.json(
+                { error: "Malformed or unrecognized image format (Magic byte mismatch). Security policy check failed." },
+                { status: 400 }
+            );
+        }
+
         // Ensure the upload directory exists
         if (!existsSync(UPLOAD_DIR)) {
             mkdirSync(UPLOAD_DIR, { recursive: true });
         }
 
-        // Generate a unique filename
-        const ext = file.name?.split(".").pop() || "jpg";
+        // Generate a completely clean unique filename with verified extension. Ignore original file.name entirely.
         const filename = `${uuidv4()}.${ext}`;
         const filepath = path.join(UPLOAD_DIR, filename);
 
-        // Write file to disk
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        // Write file securely to disk
         await writeFile(filepath, buffer);
 
-        // Return the public URL path (relative to /public)
+        // Return the public URL path
         const imageUrl = `/uploads/${filename}`;
         return NextResponse.json({ url: imageUrl }, { status: 201 });
     } catch (error) {

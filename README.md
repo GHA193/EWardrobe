@@ -9,6 +9,7 @@ A modern, premium digital wardrobe application to organize your clothing collect
 - **Detailed Notes**: Record brand, purchase date, size, color, and free-form notes for each item.
 - **Global Search**: Instantly search across brand, notes, category, color, and size fields.
 - **Native Access Control**: Cookie-based Session authentication with a robust local SQLite setup. Includes a forced setup wizard, global middleware route interception, and strict complexity password enforcement.
+- **Upload Security**: Employs deep Magic Bytes (file signature) validation, discarding client-side spoofed filenames and MIME types to completely eliminate executing malicious scripts (Image Trojans) hidden in upload sequences. Max 10MB dual verification.
 - **Modern Light UI**: Glassmorphism, micro-animations, custom scrollbars, and a carefully crafted bright visual design system.
 - **Internationalization (i18n)**: Built-in bilingual support with a toggle for English and Chinese (Default), saved to local storage.
 
@@ -76,7 +77,6 @@ e-wardrobe/
 
 ## Future Plans
 
-- Migrate from SQLite to a robust relational database (e.g., MySQL or PostgreSQL)
 - Remote Object Storage for images
 - Outfit building and matching
 - Wear analytics and season-based recommendations
