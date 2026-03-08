@@ -33,6 +33,10 @@ export default function HomePage() {
   const [detailItem, setDetailItem] = useState(null);
   const [toast, setToast] = useState(null);
 
+  // Batch Selection State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+
   // ---- Debounced search ----
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
@@ -96,6 +100,26 @@ export default function HomePage() {
       await fetch(`/api/items/${id}`, { method: "DELETE" });
       showToast(t("itemDeleted"));
       setDetailItem(null);
+      fetchItems();
+    } catch {
+      showToast(t("failedToDelete"), "error");
+    }
+  };
+
+  // ---- Batch Delete handler ----
+  const handleBatchDelete = async () => {
+    if (selectedItems.size === 0) return;
+    if (!confirm(t("confirmBatchDelete"))) return;
+    try {
+      const res = await fetch("/api/items/batch-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedItems) })
+      });
+      if (!res.ok) throw new Error("Batch delete failed");
+      showToast(t("itemDeleted"));
+      setIsSelectionMode(false);
+      setSelectedItems(new Set());
       fetchItems();
     } catch {
       showToast(t("failedToDelete"), "error");
@@ -214,13 +238,25 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-          <button
-            className="btn btn-ghost"
-            style={{ flexShrink: 0, marginLeft: "var(--space-md)" }}
-            onClick={() => setShowCategoryManager(true)}
-          >
-            ⚙️ {t("manageCategories")}
-          </button>
+          <div className={s.filterActions}>
+            <button
+              className="btn btn-ghost"
+              style={{ flexShrink: 0 }}
+              onClick={() => {
+                setIsSelectionMode(!isSelectionMode);
+                if (isSelectionMode) setSelectedItems(new Set());
+              }}
+            >
+              {t(isSelectionMode ? "cancelSelect" : "batchSelect")}
+            </button>
+            <button
+              className="btn btn-ghost"
+              style={{ flexShrink: 0 }}
+              onClick={() => setShowCategoryManager(true)}
+            >
+              ⚙️ {t("manageCategories")}
+            </button>
+          </div>
         </div>
 
         {/* ===== Item Grid ===== */}
@@ -250,10 +286,24 @@ export default function HomePage() {
             items.map((item) => (
               <div
                 key={item.id}
-                className={s.itemCard}
-                onClick={() => setDetailItem(item)}
+                className={`${s.itemCard} ${selectedItems.has(item.id) ? s.itemCardSelected : ""}`}
+                onClick={() => {
+                  if (isSelectionMode) {
+                    const next = new Set(selectedItems);
+                    if (next.has(item.id)) next.delete(item.id);
+                    else next.add(item.id);
+                    setSelectedItems(next);
+                  } else {
+                    setDetailItem(item);
+                  }
+                }}
               >
                 <div className={s.itemImageWrapper}>
+                  {isSelectionMode && (
+                    <div className={s.selectionOverlay}>
+                      <span className={s.selectionOverlayCheck}>✓</span>
+                    </div>
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     className={s.itemImage}
@@ -304,6 +354,31 @@ export default function HomePage() {
           )}
         </div>
       </main>
+
+      {/* ===== Batch Action Bar ===== */}
+      <div className={`${s.actionBar} ${isSelectionMode ? s.actionBarVisible : ""}`}>
+        <div className={s.actionBarInfo}>
+          {t("selectedCount")} {selectedItems.size}
+        </div>
+        <div className={s.actionBarActions}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => {
+              setIsSelectionMode(false);
+              setSelectedItems(new Set());
+            }}
+          >
+            {t("cancelSelect")}
+          </button>
+          <button
+            className="btn btn-danger"
+            disabled={selectedItems.size === 0}
+            onClick={handleBatchDelete}
+          >
+            {t("batchDelete")}
+          </button>
+        </div>
+      </div>
 
       {/* ===== Detail Modal ===== */}
       {detailItem && (

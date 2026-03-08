@@ -189,6 +189,8 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-md) 0;
+  flex-wrap: wrap;
+  gap: var(--space-md);
 }
 
 .filterBar {
@@ -197,7 +199,14 @@
   gap: var(--space-sm);
   overflow-x: auto;
   scrollbar-width: none;
-  flex: 1;
+  flex: 1 1 auto;
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-shrink: 0;
 }
 
 /* ---------- Category Manager Modal ---------- */
@@ -439,6 +448,86 @@
 
 .itemCategory {
   font-size: 0.6875rem;
+}
+
+/* ---------- Batch Selection State ---------- */
+.itemCardSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.itemCardSelected:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 0 2px var(--color-primary), var(--shadow-glow);
+}
+
+.selectionOverlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all var(--transition-fast);
+}
+
+.itemCardSelected .selectionOverlay {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.selectionOverlayCheck {
+  font-size: 14px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all var(--transition-fast);
+}
+
+.itemCardSelected .selectionOverlayCheck {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---------- Batch Action Bar ---------- */
+.actionBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(245, 245, 250, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  transform: translateY(100%);
+  transition: transform var(--transition-base);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.actionBarVisible {
+  transform: translateY(0);
+}
+
+.actionBarInfo {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.actionBarActions {
+  display: flex;
+  gap: var(--space-sm);
 }
 
 /* ---------- Empty State ---------- */
