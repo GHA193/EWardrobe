@@ -14,10 +14,14 @@ export async function POST(request) {
         }
 
         const body = await request.json();
-        const { oldPassword, newPassword } = body;
+        const { oldPassword, newPassword, confirmNewPassword } = body;
 
-        if (!oldPassword || !newPassword) {
-            return NextResponse.json({ error: "Both old and new passwords are required" }, { status: 400 });
+        if (!oldPassword || !newPassword || !confirmNewPassword) {
+            return NextResponse.json({ error: "All password fields are required" }, { status: 400 });
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            return NextResponse.json({ error: "New passwords do not match" }, { status: 400 });
         }
 
         const db = getDb();

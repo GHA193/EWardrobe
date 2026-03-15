@@ -501,17 +501,21 @@ function SettingsMenu({ t, onChangePassword }) {
 function ChangePasswordModal({ t, onClose, showToast }) {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!oldPassword || !newPassword) return;
+    if (!oldPassword || !newPassword || !confirmNewPassword) return;
+    if (newPassword !== confirmNewPassword) {
+      return alert(t("passwordsDoNotMatch"));
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oldPassword, newPassword })
+        body: JSON.stringify({ oldPassword, newPassword, confirmNewPassword })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -553,6 +557,18 @@ function ChangePasswordModal({ t, onClose, showToast }) {
               className="input"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 8, fontSize: "0.875rem", color: "var(--text-secondary)", fontWeight: 500 }}>
+              {t("confirmNewPassword")}
+            </label>
+            <input
+              type="password"
+              className="input"
+              value={confirmNewPassword}
+              onChange={e => setConfirmNewPassword(e.target.value)}
               required
             />
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 6 }}>
